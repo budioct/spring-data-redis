@@ -4,7 +4,13 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.geo.Circle;
+import org.springframework.data.geo.Distance;
+import org.springframework.data.geo.GeoResults;
+import org.springframework.data.geo.Point;
+import org.springframework.data.redis.connection.RedisGeoCommands;
 import org.springframework.data.redis.core.*;
+import org.springframework.data.redis.domain.geo.Metrics;
 
 import static org.hamcrest.MatcherAssert.*;
 import static org.hamcrest.Matchers.*;
@@ -156,6 +162,39 @@ public class RedisTest {
         Assertions.assertEquals("budhi@test.com", operations.get("user:1", "email"));
 
         redisTemplate.delete("user:1");
+
+    }
+
+    /**
+     * Geo Operation
+     *  Untuk berinteraksi dengan struktur data Geo di Redis, kita bisa menggunakan GeoOperations class
+     *  https://docs.spring.io/spring-data/redis/docs/current/api/org/springframework/data/redis/core/GeoOperations.html
+     *
+     *  Geospatial
+     *   Struktur data geospatial digunakan untuk menyimpan data koordinat
+     *   Struktur data ini sangat bagus untuk mencari koordinat terdekat, jarak, radius dan lain-lain
+     */
+
+    @Test
+    public void testGeoOperation(){
+
+        GeoOperations<String, String> operations = redisTemplate.opsForGeo();
+
+        operations.add("sellers", new Point(106.822702, -6.177590), "Toko A"); // Long add(K key, Point point, M member) // set key dengan value titik kordinat
+        operations.add("sellers", new Point(106.820889, -6.174964), "Toko B");
+
+        Distance distance = operations.distance("sellers", "Toko A", "Toko B", Metrics.KILOMETERS); // Distance distance(K key, M member1, M member2, Metric metric) // Dapatkan Distance antara member1 dan member2 yang diberikan Metric.
+        Assertions.assertEquals(0.3543, distance.getValue()); // double getValue() // mendapat nilai dari GeoOperations
+
+        GeoResults<RedisGeoCommands.GeoLocation<String>> search = operations.search("sellers", new Circle(
+                new Point(106.821825, -6.175105),
+                new Distance(5, Metrics.KILOMETERS)
+        )); // GeoResults<RedisGeoCommands.GeoLocation<M>> search(K key, Circle within) // Dapatkan anggota dalam batas-batas tertentu Circle.
+
+        Assertions.assertEquals(2, search.getContent().size());
+        Assertions.assertEquals("Toko A", search.getContent().get(0).getContent().getName());
+        Assertions.assertEquals("Toko B", search.getContent().get(1).getContent().getName());
+
 
     }
 
