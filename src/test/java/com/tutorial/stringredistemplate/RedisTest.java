@@ -11,6 +11,8 @@ import static org.hamcrest.Matchers.*;
 import static org.mockito.Mockito.*;
 
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 
 @SpringBootTest
 public class RedisTest {
@@ -122,6 +124,38 @@ public class RedisTest {
         Assertions.assertEquals("budhi", operations.popMax("score").getValue()); // TypedTuple<V> popMax(K key) // Hapus dan kembalikan nilai dengan skornya yang memiliki skor tertinggi dari kumpulan yang diurutkan pada key.
         Assertions.assertEquals(90, operations.popMax("score").getScore()); // Double getScore() // mendapatkan score
         Assertions.assertEquals("malik", operations.popMax("score").getValue()); // V getValue() // mendapatkan value
+
+    }
+
+    /**
+     * Hash Operation
+     *  Untuk berinteraksi dengan struktur data Hash di Redis, kita bisa menggunakan HashOperations class
+     *  https://docs.spring.io/spring-data/redis/docs/current/api/org/springframework/data/redis/core/HashOperations.html
+     */
+
+    @Test
+    void testHashOperation(){
+
+        HashOperations<String, Object, Object> operations = redisTemplate.opsForHash(); // Seperti Map<K,V>
+
+        // menamdabah data satu persatu
+//        operations.put("user:1", "id", "1"); // void put(H key, HK hashKey, HV value) // menambah data ke HashOperation<T,V,S>
+//        operations.put("user:1", "name", "budhi");
+//        operations.put("user:1", "email", "budhi@test.com");
+
+        // menambah data sekaligun dengan collection
+        Map<String, String> map = new HashMap<>();
+        map.put("id", "1");
+        map.put("name", "budhi");
+        map.put("email", "budhi@test.com");
+
+        operations.putAll("user:1", map); // void putAll(H key, Map<? extends HK, ? extends HV> m) // Setel beberapa bidang hash ke beberapa nilai menggunakan data yang disediakan di m. // binding/add Collection dengan/ke HashOperation
+
+        Assertions.assertEquals("1", operations.get("user:1", "id")); // HV get(H key, Object hashKey) // Dapatkan nilai yang diberikan hashKey dari hash di key.
+        Assertions.assertEquals("budhi", operations.get("user:1", "name"));
+        Assertions.assertEquals("budhi@test.com", operations.get("user:1", "email"));
+
+        redisTemplate.delete("user:1");
 
     }
 
