@@ -4,10 +4,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.redis.core.ListOperations;
-import org.springframework.data.redis.core.SetOperations;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.core.*;
 
 import static org.hamcrest.MatcherAssert.*;
 import static org.hamcrest.Matchers.*;
@@ -104,6 +101,27 @@ public class RedisTest {
         assertThat(operations.members("students"), hasItems("budhi", "oct", "malik")); // void assertThat(T actual, Matcher<? super T> matcher)
 
         redisTemplate.delete("students");
+
+    }
+
+    /**
+     * ZSet Operation
+     * ● Untuk berinteraksi dengan struktur data Sorted Set di Redis, kita bisa menggunakan ZSetOperations class
+     * ● https://docs.spring.io/spring-data/redis/docs/current/api/org/springframework/data/redis/core/ZSetOperations.html
+     */
+
+    @Test
+    void testSortedSetOperation(){
+
+        ZSetOperations<String, String> operations = redisTemplate.opsForZSet(); // SortedSet collection.. hasil dari Set akan di sorted / urutkan
+
+        operations.add("score", "oct", 90);
+        operations.add("score", "budhi", 100);
+        operations.add("score", "malik", 80);
+
+        Assertions.assertEquals("budhi", operations.popMax("score").getValue()); // TypedTuple<V> popMax(K key) // Hapus dan kembalikan nilai dengan skornya yang memiliki skor tertinggi dari kumpulan yang diurutkan pada key.
+        Assertions.assertEquals(90, operations.popMax("score").getScore()); // Double getScore() // mendapatkan score
+        Assertions.assertEquals("malik", operations.popMax("score").getValue()); // V getValue() // mendapatkan value
 
     }
 
