@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.geo.Circle;
 import org.springframework.data.geo.Distance;
 import org.springframework.data.geo.GeoResults;
@@ -61,6 +62,8 @@ public class RedisTest {
         Thread.sleep(Duration.ofSeconds(3L));
         Assertions.assertNull(oprations.get("budhi"));
 
+        redisTemplate.delete("budhi");
+
     }
 
     /**
@@ -85,6 +88,8 @@ public class RedisTest {
         Assertions.assertEquals("budhi", operations.leftPop("names")); // V leftPop(K key) dari kiri // Menghapus dan mengembalikan elemen terakhir dalam daftar yang disimpan di key.
         Assertions.assertEquals("oct", operations.leftPop("names"));
         Assertions.assertEquals("malik", operations.leftPop("names"));
+
+        redisTemplate.delete("names");
 
     }
 
@@ -130,6 +135,8 @@ public class RedisTest {
         Assertions.assertEquals("budhi", operations.popMax("score").getValue()); // TypedTuple<V> popMax(K key) // Hapus dan kembalikan nilai dengan skornya yang memiliki skor tertinggi dari kumpulan yang diurutkan pada key.
         Assertions.assertEquals(90, operations.popMax("score").getScore()); // Double getScore() // mendapatkan score
         Assertions.assertEquals("malik", operations.popMax("score").getValue()); // V getValue() // mendapatkan value
+
+        redisTemplate.delete("score");
 
     }
 
@@ -217,6 +224,45 @@ public class RedisTest {
 
         Assertions.assertEquals(7L, operations.size("traffics")); // Long size(K... keys) // Mendapatkan jumlah elemen saat ini dalam kunci.
 
+        redisTemplate.delete("traffics");
+
+    }
+
+    /**
+     * Transaction
+     *  Seperti kita tahu, bahwa Redis mendukung fitur Transaction dengan menggunakan perintah MULTI DAN EXEC
+     *  Hal ini juga bisa dilakukan di Spring Data Redis dengan menggunakan RedisTemplate
+     *  Namun, agar menggunakan data koneksi ke redis yang sama, maka kita perlu menggunakan perintah RedisTemplate.execute()
+     *
+     * Transaction
+     *  # Seperti pada database relational, redis juga mendukung transaction
+     *  # Proses transaction adalah proses dimana kita mengirimkan beberapa perintah, dan perintah tersebut akan dianggap sukses jika semua perintah sukses, jika gagal maka semua perintah harus dibatalkan
+     *
+     *  # Operasi                   Keterangan
+     *  # multi (begin)             Mark the start of a transaction block
+     *  # exec (commit)              Execute all commands issued after MULTI
+     *  # discard (rollback)        Discard all commands issued after MULTI
+     */
+
+    @Test
+    void testTransactionRedis(){
+
+        redisTemplate.execute(new SessionCallback<>(){
+            @Override
+            public Object execute(RedisOperations operations) throws DataAccessException {
+                operations.multi(); // begin
+                operations.opsForValue().set("test1", "budhi"); // void set(K key, V value) // set key dan value pada operaion Value
+                operations.opsForValue().set("test2", "oct");
+                operations.exec(); // comit
+                return null;
+            }
+        }); // <T> T execute(SessionCallback<T> session) //
+
+        Assertions.assertEquals("budhi", redisTemplate.opsForValue().get("test1"));
+        Assertions.assertEquals("oct", redisTemplate.opsForValue().get("test2"));
+
+        redisTemplate.delete("test1");
+        redisTemplate.delete("test2");
 
     }
 
