@@ -5,8 +5,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.ListOperations;
+import org.springframework.data.redis.core.SetOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+
+import static org.hamcrest.MatcherAssert.*;
+import static org.hamcrest.Matchers.*;
+import static org.mockito.Mockito.*;
 
 import java.time.Duration;
 
@@ -75,6 +80,30 @@ public class RedisTest {
         Assertions.assertEquals("budhi", operations.leftPop("names")); // V leftPop(K key) dari kiri // Menghapus dan mengembalikan elemen terakhir dalam daftar yang disimpan di key.
         Assertions.assertEquals("oct", operations.leftPop("names"));
         Assertions.assertEquals("malik", operations.leftPop("names"));
+
+    }
+
+    /**
+     * Set Operation
+     *  Untuk berinteraksi dengan struktur data Set di Redis, kita bisa menggunakan SetOperations class
+     *  https://docs.spring.io/spring-data/redis/docs/current/api/org/springframework/data/redis/core/SetOperations.html
+     */
+
+    @Test
+    void testSetOperation(){
+        SetOperations<String, String> operations = redisTemplate.opsForSet(); // untuk collection uniq
+
+        operations.add("students", "budhi");
+        operations.add("students", "oct");
+        operations.add("students", "malik");
+        operations.add("students", "budhi");
+        operations.add("students", "oct");
+        operations.add("students", "malik");
+
+        Assertions.assertEquals(3,operations.members("students").size()); // Set<V> members(K key) // get data dari Set operation
+        assertThat(operations.members("students"), hasItems("budhi", "oct", "malik")); // void assertThat(T actual, Matcher<? super T> matcher)
+
+        redisTemplate.delete("students");
 
     }
 
