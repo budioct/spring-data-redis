@@ -4,17 +4,14 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.redis.core.ListOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
 import java.time.Duration;
 
-import static org.hamcrest.MatcherAssert.*;
-import static org.hamcrest.Matchers.*;
-import static org.mockito.Mockito.*;
-
 @SpringBootTest
-public class StringTest {
+public class RedisTest {
 
     /**
      * Redis Template
@@ -53,6 +50,31 @@ public class StringTest {
 
         Thread.sleep(Duration.ofSeconds(3L));
         Assertions.assertNull(oprations.get("budhi"));
+
+    }
+
+    /**
+     * List Operation
+     *  Untuk berinteraksi dengan struktur data List di Redis, kita bisa menggunakan ListOperations class
+     *  https://docs.spring.io/spring-data/redis/docs/current/api/org/springframework/data/redis/core/ListOperations.html
+     */
+
+    @Test
+    void testListOperation(){
+
+        ListOperations<String, String> operations = redisTemplate.opsForList();
+
+        operations.rightPush("names", "budhi"); // Long rightPush(K key, V value) // Tambahkan value ke key. dari kanan ke kiri
+        operations.rightPush("names", "oct");
+        operations.rightPush("names", "malik");
+
+//         Assertions.assertEquals("malik", operations.rightPop("names")); // V rightPop(K key) dari kanan // Menghapus dan mengembalikan elemen terakhir dalam daftar yang disimpan di key.
+//         Assertions.assertEquals("oct", operations.rightPop("names"));
+//         Assertions.assertEquals("budhi", operations.rightPop("names"));
+
+        Assertions.assertEquals("budhi", operations.leftPop("names")); // V leftPop(K key) dari kiri // Menghapus dan mengembalikan elemen terakhir dalam daftar yang disimpan di key.
+        Assertions.assertEquals("oct", operations.leftPop("names"));
+        Assertions.assertEquals("malik", operations.leftPop("names"));
 
     }
 
