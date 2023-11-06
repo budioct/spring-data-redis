@@ -196,6 +196,28 @@ public class RedisTest {
         Assertions.assertEquals("Toko B", search.getContent().get(1).getContent().getName());
 
 
+        redisTemplate.delete("sellers");
+    }
+
+
+    /**
+     * Hyper Log Log Operation
+     *  Untuk berinteraksi dengan struktur data Hyper Log Log di Redis, kita bisa menggunakan HyperLogLogOperations class
+     *  https://docs.spring.io/spring-data/redis/docs/current/api/org/springframework/data/redis/core/HyperLogLogOperations.html
+     */
+
+    @Test
+    void testHyperLogLogOperation(){
+
+        HyperLogLogOperations<String, String> operations = redisTemplate.opsForHyperLogLog(); // Uniq, value yang sama tidak akan di masukan ke collection
+
+        operations.add("traffics", "budhi", "oct", "malik"); // Long add(K key, V... values) // menambahkan data ke hyperLogLog
+        operations.add("traffics", "jamal", "oct", "husein");
+        operations.add("traffics", "asep", "oct", "rebal");
+
+        Assertions.assertEquals(7L, operations.size("traffics")); // Long size(K... keys) // Mendapatkan jumlah elemen saat ini dalam kunci.
+
+
     }
 
 
