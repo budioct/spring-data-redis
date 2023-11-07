@@ -9,7 +9,12 @@ import org.springframework.data.geo.Circle;
 import org.springframework.data.geo.Distance;
 import org.springframework.data.geo.GeoResults;
 import org.springframework.data.geo.Point;
+import org.springframework.data.redis.RedisSystemException;
 import org.springframework.data.redis.connection.RedisGeoCommands;
+import org.springframework.data.redis.connection.stream.Consumer;
+import org.springframework.data.redis.connection.stream.MapRecord;
+import org.springframework.data.redis.connection.stream.ReadOffset;
+import org.springframework.data.redis.connection.stream.StreamOffset;
 import org.springframework.data.redis.core.*;
 import org.springframework.data.redis.domain.geo.Metrics;
 
@@ -299,6 +304,75 @@ public class RedisTest {
         assertThat(statuses, not(hasItem(false)));
 
     }
+
+    /**
+     * Stream Operation (secara manual)
+     * ● Untuk berinteraksi dengan struktur data Stream di Redis, kita bisa menggunakan StreamOperations class
+     * ● https://docs.spring.io/spring-data/redis/docs/current/api/org/springframework/data/redis/core/StreamOperations.html
+     */
+
+    @Test
+    void testPublisher(){
+
+        // data yang di set menjadi publisher
+
+        StreamOperations<String, Object, Object> operations = redisTemplate.opsForStream(); // instance. kontrak interface StreamOperations<K, HK, HV>
+        MapRecord<String, String, String> record = MapRecord.create("stream-1", Map.of(
+                "name", "budhi",
+                "address", "Tangerang"
+        )); // <S, K, V> MapRecord<S, K, V> create(S stream, Map<K, V> map) // membuat record
+
+        for (int i = 0; i < 10; i++) {
+            operations.add(record); // RecordId add(MapRecord<K, ? extends HK, ? extends HV> record)
+        }
+
+    }
+
+    @Test
+    void testSubscribe(){
+
+        /**
+         * dokumentasi ReadOffset spring data redis
+         * https://docs.spring.io/spring-data/redis/docs/current/api/org/springframework/data/redis/connection/stream/ReadOffset.html
+         */
+
+        // Subscribe/ Consumer  menerima data set dari publisher
+
+        StreamOperations<String, Object, Object> operations = redisTemplate.opsForStream(); // instance. kontrak interface StreamOperations<K, HK, HV>
+
+        try {
+            operations.createGroup("stream-1", "sample-group"); // String createGroup(K key, String group) // Buat grup-konsumen di latest offset.
+        } catch (RedisSystemException e) {
+            // group sudah ada
+        }
+
+        // List<MapRecord<K, HK, HV>> read(Consumer consumer, StreamOffset<K>... streams) //  Membaca catatan dari satu atau lebih StreamOffset menggunakan grup-konsumen.
+        // static Consumer from(String group, String name) // Ciptakan konsumen baru.
+        // static <K> StreamOffset<K> create(K stream, ReadOffset readOffset) // Buat Stream Offset yang diberikan key dan ReadOffset.
+        List<MapRecord<String, Object, Object>> records = operations.read(Consumer.from("sample-group", "sample-1"),
+                StreamOffset.create("stream-1", ReadOffset.lastConsumed()));
+
+        for (MapRecord<String, Object, Object> record : records) {
+            System.out.println(record);
+        } // melihat hasil sub
+
+        /**
+         * result:
+         * MapBackedRecord{recordId=1699341541063-0, kvMap={name=budhi, address=Tangerang}}
+         * MapBackedRecord{recordId=1699341541068-0, kvMap={name=budhi, address=Tangerang}}
+         * MapBackedRecord{recordId=1699341541072-0, kvMap={name=budhi, address=Tangerang}}
+         * MapBackedRecord{recordId=1699341541076-0, kvMap={name=budhi, address=Tangerang}}
+         * MapBackedRecord{recordId=1699341541080-0, kvMap={name=budhi, address=Tangerang}}
+         * MapBackedRecord{recordId=1699341541083-0, kvMap={name=budhi, address=Tangerang}}
+         * MapBackedRecord{recordId=1699341541087-0, kvMap={name=budhi, address=Tangerang}}
+         * MapBackedRecord{recordId=1699341541091-0, kvMap={name=budhi, address=Tangerang}}
+         * MapBackedRecord{recordId=1699341541095-0, kvMap={name=budhi, address=Tangerang}}
+         * MapBackedRecord{recordId=1699341541098-0, kvMap={name=budhi, address=Tangerang}}
+         */
+
+    }
+
+
 
 
 }
