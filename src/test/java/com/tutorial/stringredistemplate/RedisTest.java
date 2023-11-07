@@ -19,6 +19,7 @@ import static org.mockito.Mockito.*;
 
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @SpringBootTest
@@ -187,19 +188,22 @@ public class RedisTest {
 
         GeoOperations<String, String> operations = redisTemplate.opsForGeo();
 
+        // titik kordinat dengan object Point(x:longtitude,y:langtitude)
+        // longtitude x: 106.822702
+        // langtitude y: -6.177590
         operations.add("sellers", new Point(106.822702, -6.177590), "Toko A"); // Long add(K key, Point point, M member) // set key dengan value titik kordinat
         operations.add("sellers", new Point(106.820889, -6.174964), "Toko B");
 
-        Distance distance = operations.distance("sellers", "Toko A", "Toko B", Metrics.KILOMETERS); // Distance distance(K key, M member1, M member2, Metric metric) // Dapatkan Distance antara member1 dan member2 yang diberikan Metric.
+        Distance distance = operations.distance("sellers", "Toko A", "Toko B", Metrics.KILOMETERS); // Distance distance(K key, M member1, M member2, Metric metric) // Dapatkan Distance/ jarak antara member1 dan member2 yang diberikan Metric.
         Assertions.assertEquals(0.3543, distance.getValue()); // double getValue() // mendapat nilai dari GeoOperations
 
         GeoResults<RedisGeoCommands.GeoLocation<String>> search = operations.search("sellers", new Circle(
                 new Point(106.821825, -6.175105),
                 new Distance(5, Metrics.KILOMETERS)
-        )); // GeoResults<RedisGeoCommands.GeoLocation<M>> search(K key, Circle within) // Dapatkan anggota dalam batas-batas tertentu Circle.
+        )); // GeoResults<RedisGeoCommands.GeoLocation<M>> search(K key, Circle within) // Dapatkan anggota dalam batas-batas tertentu Circle. mendapat apa saja dalam radius tersebut dalam km
 
         Assertions.assertEquals(2, search.getContent().size());
-        Assertions.assertEquals("Toko A", search.getContent().get(0).getContent().getName());
+        Assertions.assertEquals("Toko A", search.getContent().get(0).getContent().getName()); // cek jarak radius 5 km dari titik kordinat apakah ada member Toko A
         Assertions.assertEquals("Toko B", search.getContent().get(1).getContent().getName());
 
 
@@ -210,6 +214,7 @@ public class RedisTest {
     /**
      * Hyper Log Log Operation
      *  Untuk berinteraksi dengan struktur data Hyper Log Log di Redis, kita bisa menggunakan HyperLogLogOperations class
+     *  jadi kalau mau cari jumlah data unique lebih cocok hyperloglog tidak perlu media penyimpanan terlalu besar. tetapi kita tidak bisa mengambil datanya. yang di simpan cuman jumlah data unique nya saja
      *  https://docs.spring.io/spring-data/redis/docs/current/api/org/springframework/data/redis/core/HyperLogLogOperations.html
      */
 
@@ -263,6 +268,35 @@ public class RedisTest {
 
         redisTemplate.delete("test1");
         redisTemplate.delete("test2");
+
+    }
+
+    /**
+     * Pipeline
+     *  Di kelas Redis, kita pernah belajar tentang pipeline, dimana kita bisa mengirim beberapa perintah secara langsung tanpa harus menunggu balasan satu per satu dari Redis
+     *  Hal ini juga bisa dilakukan menggunakan Spring Data Redis menggunakan RedisTemplate.executePipelined()
+     *  Return dari executePipelined() akan berisikan List status dari tiap perintah yang kita lakukan
+     */
+
+    @Test
+    void testPipeline(){
+
+        List<Object> statuses = redisTemplate.executePipelined(new SessionCallback<Object>() {
+            @Override
+            public Object execute(RedisOperations operations) throws DataAccessException {
+
+                // operasi value akan di tampung di list
+                operations.opsForValue().set("test1", "budhi", Duration.ofSeconds(2));
+                operations.opsForValue().set("test2", "oct", Duration.ofSeconds(2));
+                operations.opsForValue().set("test3", "malik", Duration.ofSeconds(2));
+                operations.opsForValue().set("test4", "jamal", Duration.ofSeconds(2));
+                return null;
+            }
+        }); // List<Object> executePipelined(SessionCallback<?> session) // Mengeksekusi objek tindakan tertentu pada koneksi pipa, mengembalikan hasilnya.
+
+        assertThat(statuses, hasSize(4));
+        assertThat(statuses, hasItem(true));
+        assertThat(statuses, not(hasItem(false)));
 
     }
 
