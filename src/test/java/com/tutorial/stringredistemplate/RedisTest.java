@@ -1,5 +1,6 @@
 package com.tutorial.stringredistemplate;
 
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +11,8 @@ import org.springframework.data.geo.Distance;
 import org.springframework.data.geo.GeoResults;
 import org.springframework.data.geo.Point;
 import org.springframework.data.redis.RedisSystemException;
+import org.springframework.data.redis.connection.Message;
+import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.data.redis.connection.RedisGeoCommands;
 import org.springframework.data.redis.connection.stream.Consumer;
 import org.springframework.data.redis.connection.stream.MapRecord;
@@ -27,6 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @SpringBootTest
 public class RedisTest {
 
@@ -332,7 +336,9 @@ public class RedisTest {
     void testSubscribe(){
 
         /**
-         * dokumentasi ReadOffset spring data redis
+         * dokumentasi
+         * https://docs.spring.io/spring-data/redis/docs/current/api/org/springframework/data/redis/core/StreamOperations.html
+         * https://docs.spring.io/spring-data/redis/docs/3.0.8/api/org/springframework/data/redis/connection/stream/Consumer.html
          * https://docs.spring.io/spring-data/redis/docs/current/api/org/springframework/data/redis/connection/stream/ReadOffset.html
          */
 
@@ -368,6 +374,71 @@ public class RedisTest {
          * MapBackedRecord{recordId=1699341541091-0, kvMap={name=budhi, address=Tangerang}}
          * MapBackedRecord{recordId=1699341541095-0, kvMap={name=budhi, address=Tangerang}}
          * MapBackedRecord{recordId=1699341541098-0, kvMap={name=budhi, address=Tangerang}}
+         */
+
+    }
+
+    /**
+     * Pub Sub
+     *  Khusus untuk fitur Redis PubSub, tidak terdapat class Operation
+     *  Kita bisa langsung menggunakan RedisTemplate.convertAndSend() untuk mengirim ke PubSub
+     *  https://docs.spring.io/spring-data/redis/docs/current/api/org/springframework/data/redis/core/RedisTemplate.html#convertAndSend(java.lang.String,java.lang.Object)
+     *  Dan RedisConnection.subscribe() untuk membuat Subscriber di PubSub
+     *  https://docs.spring.io/spring-data/redis/docs/current/api/org/springframework/data/redis/connection/RedisPubSubCommands.html#subscribe(org.springframework.data.redis.connection.MessageListener,byte%5B%5D...)
+     *
+     *  Note:
+     *  penggunaan PubSub dengan StreamListener. cara penggunaanya lebih mudah PubSub
+     *  perbedaanya di pubsub tidak memliliki consumer group jadi listenernya akan menerima semua datanya
+     */
+
+    @Test
+    void testPubSubRedis(){
+
+        // channer sama
+        redisTemplate.getConnectionFactory().getConnection().subscribe(new MessageListener() {
+            @Override
+            public void onMessage(Message message, byte[] pattern) {
+                String data = new String(message.getBody()); // byte[] getBody() // hasil byte perlu convert to string
+                log.info("Received Message1: {}", data);
+            }
+        }, "my-channel".getBytes()); // void subscribe(MessageListener listener, byte[]... channels) // menentukan subscriber/ consumer dengan channelnya unutk listener ada event masuk ke pubsub
+
+        redisTemplate.getConnectionFactory().getConnection().subscribe(new MessageListener() {
+            @Override
+            public void onMessage(Message message, byte[] pattern) {
+                String data = new String(message.getBody()); // byte[] getBody() // hasil byte perlu convert to string
+                log.info("Received Message2: {}", data);
+            }
+        }, "my-channel".getBytes()); // void subscribe(MessageListener listener, byte[]... channels) // menentukan subscriber/ consumer dengan channelnya unutk listener ada event masuk ke pubsub
+
+        for (int i = 0; i < 10; i++) {
+            redisTemplate.convertAndSend("my-channel", "Hello Redis " + i); // Long convertAndSend(String channel, Object message) // kirim ke pubsub/ channel
+        }
+
+        /**
+         * result:
+         * 2023-11-07T17:06:36.563+07:00  INFO 10340 --- [ioEventLoop-4-4] c.t.stringredistemplate.RedisTest        : Received Message1: Hello Redis 0
+         * 2023-11-07T17:06:36.563+07:00  INFO 10340 --- [ioEventLoop-4-5] c.t.stringredistemplate.RedisTest        : Received Message2: Hello Redis 0
+         * 2023-11-07T17:06:36.567+07:00  INFO 10340 --- [ioEventLoop-4-4] c.t.stringredistemplate.RedisTest        : Received Message1: Hello Redis 1
+         * 2023-11-07T17:06:36.567+07:00  INFO 10340 --- [ioEventLoop-4-5] c.t.stringredistemplate.RedisTest        : Received Message2: Hello Redis 1
+         * 2023-11-07T17:06:36.573+07:00  INFO 10340 --- [ioEventLoop-4-4] c.t.stringredistemplate.RedisTest        : Received Message1: Hello Redis 2
+         * 2023-11-07T17:06:36.573+07:00  INFO 10340 --- [ioEventLoop-4-5] c.t.stringredistemplate.RedisTest        : Received Message2: Hello Redis 2
+         * 2023-11-07T17:06:36.578+07:00  INFO 10340 --- [ioEventLoop-4-4] c.t.stringredistemplate.RedisTest        : Received Message1: Hello Redis 3
+         * 2023-11-07T17:06:36.578+07:00  INFO 10340 --- [ioEventLoop-4-5] c.t.stringredistemplate.RedisTest        : Received Message2: Hello Redis 3
+         * 2023-11-07T17:06:36.584+07:00  INFO 10340 --- [ioEventLoop-4-4] c.t.stringredistemplate.RedisTest        : Received Message1: Hello Redis 4
+         * 2023-11-07T17:06:36.585+07:00  INFO 10340 --- [ioEventLoop-4-5] c.t.stringredistemplate.RedisTest        : Received Message2: Hello Redis 4
+         * 2023-11-07T17:06:36.589+07:00  INFO 10340 --- [ioEventLoop-4-5] c.t.stringredistemplate.RedisTest        : Received Message2: Hello Redis 5
+         * 2023-11-07T17:06:36.589+07:00  INFO 10340 --- [ioEventLoop-4-4] c.t.stringredistemplate.RedisTest        : Received Message1: Hello Redis 5
+         * 2023-11-07T17:06:36.594+07:00  INFO 10340 --- [ioEventLoop-4-4] c.t.stringredistemplate.RedisTest        : Received Message1: Hello Redis 6
+         * 2023-11-07T17:06:36.596+07:00  INFO 10340 --- [ioEventLoop-4-5] c.t.stringredistemplate.RedisTest        : Received Message2: Hello Redis 6
+         * 2023-11-07T17:06:36.600+07:00  INFO 10340 --- [ioEventLoop-4-4] c.t.stringredistemplate.RedisTest        : Received Message1: Hello Redis 7
+         * 2023-11-07T17:06:36.600+07:00  INFO 10340 --- [ioEventLoop-4-5] c.t.stringredistemplate.RedisTest        : Received Message2: Hello Redis 7
+         * 2023-11-07T17:06:36.608+07:00  INFO 10340 --- [ioEventLoop-4-5] c.t.stringredistemplate.RedisTest        : Received Message2: Hello Redis 8
+         * 2023-11-07T17:06:36.608+07:00  INFO 10340 --- [ioEventLoop-4-4] c.t.stringredistemplate.RedisTest        : Received Message1: Hello Redis 8
+         * 2023-11-07T17:06:36.614+07:00  INFO 10340 --- [ioEventLoop-4-5] c.t.stringredistemplate.RedisTest        : Received Message2: Hello Redis 9
+         * 2023-11-07T17:06:36.614+07:00  INFO 10340 --- [ioEventLoop-4-4] c.t.stringredistemplate.RedisTest        : Received Message1: Hello Redis 9
+         * 2023-11-07T17:06:36.690+07:00  WARN 10340 --- [cTaskExecutor-1] io.lettuce.core.RedisChannelHandler      : Connection is already closed
+         * 2023-11-07T17:06:36.692+07:00  WARN 10340 --- [cTaskExecutor-1] com.tutorial.config.RedisConfig          : Redis exception
          */
 
     }
