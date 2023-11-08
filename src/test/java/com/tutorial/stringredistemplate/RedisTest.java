@@ -52,6 +52,13 @@ public class RedisTest {
 
     }
 
+    @Test
+    void testbro(){
+
+        System.gc();
+
+    }
+
     /**
      * Value Operation
      *  Struktur data yang biasa digunakan saat kita menggunakan Redis adalah String
