@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
+import java.time.Duration;
 import java.util.Map;
 
 @SpringBootTest
@@ -48,6 +49,7 @@ public class RepositoryTest {
                 .id("1")
                 .name("indomie goreng")
                 .price(3000L)
+                .ttl(-1L)
                 .build();
         productRedisRepository.save(indomieGoreng); // transaksi DB
         Assertions.assertNotNull(indomieGoreng);
@@ -74,6 +76,39 @@ public class RepositoryTest {
          * localhost:6379>
          */
 
+    }
+
+    /**
+     * Entity Time to Live
+     *   Saat membuat Entity, kadang-kadang kita ingin juga mengatur waktu expired nya
+     *   Kita bisa menggunakan annotation @TimeToLive pada salah satu atribut yang bernilai number
+     *   Secara otomatis Spring Data Redis akan menggunakan nilai di atribut @TimeToLive untuk menentukan berapa lama data harus dihapus di Redis
+     */
+
+    @Test
+    void testRepositoryTTL() throws InterruptedException {
+
+        Product indomieSoto = Product.builder()
+                .id("1")
+                .name("indomie soto")
+                .price(3000L)
+                .ttl(3L)
+                .build();
+
+        productRedisRepository.save(indomieSoto); // transaksi DB
+        Assertions.assertTrue(productRedisRepository.findById("1").isPresent()); // cek apakah datanya ada
+
+        Thread.sleep(Duration.ofSeconds(5));
+        Assertions.assertFalse(productRedisRepository.findById("1").isPresent()); // cek apakah datanya sudah tidak ada karna waktu expire 3 detik
+
+        /**
+         * redis result:
+         * localhost:6379> hgetall "products:1"
+         * (empty array)
+         * localhost:6379> exists "products:1"
+         * (integer) 0
+         * localhost:6379>
+         */
     }
 
 }
