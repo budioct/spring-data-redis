@@ -64,6 +64,15 @@ public class CollectionTest {
         List<String> names = redisTemplate.opsForList().range("names", 0, -1);// List<V> range(K key, long start, long end) // akan get data list redis dengan set key, dan index berapa ke berapa // 0, -1 --> get index 0 sampai terakhir
         assertThat(names, hasItems("budhi", "oct", "malik"));
 
+        /**
+         * redis result:
+         * localhost:6379> lrange names 0 -1
+         * 1) "budhi"
+         * 2) "oct"
+         * 3) "malik"
+         * localhost:6379>
+         */
+
     }
 
     @Test
@@ -78,6 +87,17 @@ public class CollectionTest {
 
         Set<String> members = redisTemplate.opsForSet().members("traffic");
         assertThat(members, hasItems("budhi", "oct", "malik", "husein","jamal"));
+
+        /**
+         * redis result:
+         * localhost:6379> smembers traffic
+         * 1) "malik"
+         * 2) "budhi"
+         * 3) "oct"
+         * 4) "husein"
+         * 5) "jamal"
+         * localhost:6379>
+         */
 
     }
 
@@ -106,6 +126,21 @@ public class CollectionTest {
         Assertions.assertEquals("oct", set.popFirst());
         Assertions.assertEquals("budhi", set.popFirst());
 
+        /**
+         * redis result:
+         * localhost:6379> zrange winner 80 100 byscore.......... cek byscore start end
+         * 1) "malik"
+         * 2) "jamal"
+         * 3) "oct"
+         * 4) "budhi"
+         * localhost:6379> zrange winner 0 -1.......... cek berdasarkan index start end
+         * 1) "malik"
+         * 2) "jamal"
+         * 3) "oct"
+         * 4) "budhi"
+         * localhost:6379>
+         */
+
     }
 
     @Test
@@ -122,6 +157,16 @@ public class CollectionTest {
         Map<Object, Object> user = redisTemplate.opsForHash().entries("user:1");
         assertThat(user, hasEntry("name", "budhi"));
         assertThat(user, hasEntry("address", "tangerang"));
+
+        /**
+         * redis result:
+         * localhost:6379> hgetall "user:1"
+         * 1) "name"
+         * 2) "budhi"
+         * 3) "address"
+         * 4) "tangerang"
+         * localhost:6379>
+         */
 
     }
 
