@@ -1,7 +1,8 @@
 package com.tutorial.config;
 
 import com.tutorial.data.Order;
-import com.tutorial.redis.OrderListener;
+import com.tutorial.redis.message.CustomerListener;
+import com.tutorial.redis.stream.OrderListener;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
@@ -12,6 +13,8 @@ import org.springframework.data.redis.connection.stream.ObjectRecord;
 import org.springframework.data.redis.connection.stream.ReadOffset;
 import org.springframework.data.redis.connection.stream.StreamOffset;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.listener.ChannelTopic;
+import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.stream.StreamMessageListenerContainer;
 import org.springframework.data.redis.stream.Subscription;
 
@@ -24,6 +27,7 @@ public class RedisConfig {
     @Autowired
     StringRedisTemplate redisTemplate; // extends RedisTemplate<String, String> // object implement Resis Template
 
+    // config stream
     /**
      * create: 4
      * Subscription
@@ -75,6 +79,21 @@ public class RedisConfig {
 
         return StreamMessageListenerContainer.create(connectionFactory, options); // membuat pabrik koneksi redis dengan config dari StreamMessageListenerContainerOptions
 
+    }
+
+    //==================================================================================================================
+    //config pubsub
+
+    /**
+     * RedisMessageListenerContainer wadah/ tempat untuk menjalankan pubsub listener
+     */
+    @Bean(destroyMethod = "stop", initMethod = "start") // destroyMethod ketika app berhenti listener stop, initMethod ketika app running listener start
+    public RedisMessageListenerContainer messageListenerContainer(RedisConnectionFactory connectionFactory, CustomerListener customerListener){
+
+        RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+        container.setConnectionFactory(connectionFactory);
+        container.addMessageListener(customerListener, new ChannelTopic("customers"));
+        return container;
     }
 
 }
