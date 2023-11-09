@@ -8,6 +8,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.keyvalue.annotation.KeySpace;
 import org.springframework.data.redis.core.TimeToLive;
 
+import java.io.Serializable;
 import java.util.concurrent.TimeUnit;
 
 @Data
@@ -15,7 +16,11 @@ import java.util.concurrent.TimeUnit;
 @NoArgsConstructor
 @Builder
 @KeySpace("products") // adalah key pada redis.. setiap id akan di pair oleh keys di redis, seperti --> products:1 ~ products:n
-public class Product {
+public class Product implements Serializable {
+
+    /**
+     * karena hasil spring caching object RedisCacheManager adalah byte[] kita perlu implement Serializable agar bisa di simpan bianry data
+     */
 
     @Id // di id pada entity
     private String id;
